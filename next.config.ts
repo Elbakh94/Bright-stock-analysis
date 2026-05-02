@@ -2,7 +2,7 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   /* config options here */
-  transpilePackages: ['recharts', 'react-markdown'],
+  transpilePackages: ['motion'],
   images: {
     unoptimized: true,
     remotePatterns: [

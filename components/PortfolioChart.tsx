@@ -1,6 +1,6 @@
 'use client';
-
-import React from 'react';
+ 
+import React, { useEffect, useState } from 'react';
 import { 
   ResponsiveContainer, 
   AreaChart, 
@@ -10,9 +10,19 @@ import {
   CartesianGrid, 
   Tooltip 
 } from 'recharts';
-
+ 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export default function PortfolioChart({ data }: { data: any[] }) {
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return <div className="h-[300px] w-full bg-slate-50 animate-pulse rounded-2xl" />;
+  }
+
   return (
     <div className="h-[300px] w-full">
       <ResponsiveContainer width="100%" height="100%">
