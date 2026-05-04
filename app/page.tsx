@@ -23,8 +23,8 @@ import {
   RefreshCcw,
   Printer
 } from 'lucide-react';
-import { GoogleGenAI } from '@google/generative-ai';
-import ReactMarkdown from 'react-markdown';
+import { GoogleGenAI } from '@google/genai';
+import Markdown from 'react-markdown';
 import dynamic from 'next/dynamic';
 
 const PortfolioChart = dynamic(() => import('@/components/PortfolioChart'), {
@@ -35,7 +35,7 @@ const PortfolioChart = dynamic(() => import('@/components/PortfolioChart'), {
  // Initialize Gemini - handled locally in AnalystView
 // const ai = ...
 
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence } from 'motion/react';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 
@@ -360,12 +360,8 @@ function StockRadar() {
     isUpdatingRef.current = true;
     setIsUpdating(true); // Still keep state for UI indicator
     try {
-      const modelName = 'gemini-1.5-flash';
-      const genAI = new GoogleGenAI(apiKey);
-      const model = genAI.getGenerativeModel({ 
-        model: modelName,
-        tools: [{ googleSearch: {} }],
-      });
+      const modelName = 'gemini-3-flash-preview';
+      const ai = new GoogleGenAI({ apiKey });
 
       const prompt = `Return ONLY a valid JSON object (no markdown) with real-time EGX market data for Stock Radar.
       JSON structure:
@@ -377,8 +373,14 @@ function StockRadar() {
       }
       Search for the ABSOLUTE LATEST top gainers and losers in the Egyptian Exchange (EGX) right now. Ensure prices and percentage changes are current.`;
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const result = await ai.models.generateContent({
+        model: modelName,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          tools: [{ googleSearch: {} }],
+        }
+      });
+      const text = result.text;
       
       if (!text) {
         throw new Error('Empty response from AI');
@@ -638,6 +640,148 @@ function StockRadar() {
             </div>
           </div>
           <MarketNews />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MarketOverview() {
+  const sectors = [
+    { name: 'البنوك', change: '+2.4%', volume: '1.2B', trend: 'up' },
+    { name: 'العقارات', change: '0.0%', volume: '850M', trend: 'neutral' },
+    { name: 'الخدمات المالية', change: '+1.8%', volume: '600M', trend: 'up' },
+    { name: 'الموارد الأساسية', change: '-1.2%', volume: '450M', trend: 'down' },
+    { name: 'الأغذية والمشروبات', change: '+0.5%', volume: '300M', trend: 'up' },
+    { name: 'الاتصالات', change: '+3.1%', volume: '950M', trend: 'up' },
+  ];
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700" dir="rtl">
+      <MacroBar />
+      
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        {/* Sentiment & Indicators */}
+        <div className="lg:col-span-8 flex flex-col gap-8">
+          <div className="bg-white p-10 rounded-[3.5rem] shadow-sm border border-slate-100 relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-1/2 h-full bg-slate-50/50 -rotate-12 translate-x-20 pointer-events-none" />
+             <div className="relative z-10">
+               <div className="flex items-center justify-between mb-10">
+                  <div>
+                    <h3 className="text-xl font-black text-slate-900">مؤشر معنويات السوق (Sentiment)</h3>
+                    <p className="text-[10px] text-slate-400 font-bold mt-1 uppercase tracking-widest">Market Fear vs Greed Gauge</p>
+                  </div>
+                  <div className="px-4 py-2 bg-emerald-50 text-emerald-600 rounded-2xl text-[10px] font-black border border-emerald-100">
+                    Slight Greed (68/100)
+                  </div>
+               </div>
+
+               <div className="relative h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner mb-6">
+                 <div className="absolute inset-0 bg-gradient-to-r from-rose-500 via-amber-400 to-emerald-500 opacity-20" />
+                 <motion.div 
+                   initial={{ width: 0 }}
+                   animate={{ width: '68%' }}
+                   transition={{ duration: 1.5, ease: "easeOut" }}
+                   className="absolute inset-y-0 right-0 bg-emerald-500 shadow-[0_0_20px_rgba(16,185,129,0.4)]"
+                 />
+                 <div className="absolute left-[68%] top-0 h-full w-1 bg-white z-20 shadow-lg" />
+               </div>
+
+               <div className="grid grid-cols-3 text-center text-[10px] font-black uppercase tracking-widest text-slate-400">
+                  <span>خوف شديد</span>
+                  <span>متعادل</span>
+                  <span>تفاؤل مفرط</span>
+               </div>
+               
+               <div className="mt-10 p-6 bg-slate-950 rounded-[2.5rem] text-white flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative group">
+                  <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(16,185,129,0.15),transparent)]" />
+                  <div className="relative z-10 text-right">
+                    <p className="text-[10px] font-black text-emerald-400 uppercase tracking-[0.2em] mb-2">تحديث السعر الموازي (USD/EGP)</p>
+                    <h4 className="text-2xl font-black font-mono tracking-tighter">72.40 <span className="text-sm opacity-60">ج.م للموازي</span></h4>
+                  </div>
+                  <div className="relative z-10 w-full md:w-48 h-12 bg-white/5 rounded-2xl border border-white/10 flex items-center justify-center gap-3 backdrop-blur-md">
+                     <div className="flex items-center gap-2 text-rose-400">
+                        <TrendingUp size={14} />
+                        <span className="text-[10px] font-black">+1.2%</span>
+                     </div>
+                     <div className="w-px h-1/2 bg-white/10" />
+                     <span className="text-[9px] font-bold text-slate-400 uppercase">Spread: 12%</span>
+                  </div>
+               </div>
+             </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
+                <h4 className="text-sm font-black text-slate-900 mb-6 flex items-center gap-2">
+                   <Activity className="text-blue-500" size={18} />
+                   قوة السيولة (Liquidity Flow)
+                </h4>
+                <div className="space-y-4">
+                   <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-500">تدفق مؤسسي (للداخل)</span>
+                      <span className="text-xs font-black text-emerald-600">620M</span>
+                   </div>
+                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-emerald-500 w-[70%]" />
+                   </div>
+                   <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-bold text-slate-500">خروج أفراد</span>
+                      <span className="text-xs font-black text-rose-500">140M</span>
+                   </div>
+                   <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-rose-500 w-[25%]" />
+                   </div>
+                </div>
+             </div>
+             <div className="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100">
+                <h4 className="text-sm font-black text-slate-900 mb-6 flex items-center gap-2">
+                   <TrendingUp className="text-amber-500" size={18} />
+                   المؤشر السبعيني (EGX70)
+                </h4>
+                <div className="flex items-end gap-3 mb-4">
+                   <span className="text-2xl font-black font-mono tracking-tighter">8,450</span>
+                   <span className="text-emerald-500 text-[10px] font-black pb-1">+3.20%</span>
+                </div>
+                <div className="flex gap-1 h-12 items-end">
+                   {[40, 60, 45, 80, 55, 90, 70].map((h, i) => (
+                     <div key={i} className="flex-1 bg-amber-500/20 rounded-t-sm group-hover:bg-amber-500/40 transition-all" style={{ height: `${h}%` }} />
+                   ))}
+                </div>
+             </div>
+          </div>
+        </div>
+
+        {/* Sector Heatmap Sidebar */}
+        <div className="lg:col-span-4 flex flex-col gap-6">
+           <div className="bg-slate-900 p-8 rounded-[3.5rem] shadow-xl text-white flex-1 relative overflow-hidden">
+              <h3 className="text-sm font-black mb-8 flex items-center gap-2">
+                 <PieChart className="text-indigo-400" size={18} />
+                 خارطة أداء القطاعات
+              </h3>
+              <div className="space-y-4">
+                 {sectors.map((s, i) => (
+                   <div key={i} className="p-4 bg-white/5 rounded-2xl border border-white/5 flex items-center justify-between group hover:bg-white/10 transition-colors cursor-pointer">
+                      <div>
+                        <p className="text-xs font-black">{s.name}</p>
+                        <p className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">{s.volume}</p>
+                      </div>
+                      <span className={cn(
+                        "text-[10px] font-black px-3 py-1 rounded-lg",
+                        s.trend === 'up' ? 'bg-emerald-500 text-white' : 
+                        s.trend === 'down' ? 'bg-rose-500 text-white' : 
+                        'bg-white/10 text-slate-400'
+                      )}>
+                        {s.change}
+                      </span>
+                   </div>
+                 ))}
+              </div>
+              <button className="w-full mt-8 py-3 text-[10px] font-black text-slate-500 hover:text-white transition-colors border-t border-white/5 pt-6 uppercase tracking-widest">
+                 عرض التحليل التفصيلي للقطاعات
+              </button>
+           </div>
+           <MarketNews />
         </div>
       </div>
     </div>
@@ -923,7 +1067,7 @@ function FormattedMessage({ content, role }: { content: string, role: 'user' | '
         <div className="max-w-[90%] p-8 rounded-[2.5rem] bg-slate-900 text-white rounded-tl-sm shadow-xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-l from-emerald-500 to-blue-500" />
           <div className="prose prose-sm prose-invert max-w-none prose-p:leading-relaxed prose-p:text-slate-300">
-            <ReactMarkdown>{content}</ReactMarkdown>
+            <Markdown>{content}</Markdown>
           </div>
         </div>
       </motion.div>
@@ -969,7 +1113,7 @@ function FormattedMessage({ content, role }: { content: string, role: 'user' | '
                 {title}
               </h4>
               <div className="prose prose-sm prose-invert max-w-none prose-p:leading-relaxed prose-p:text-slate-300 prose-li:text-slate-300 font-medium whitespace-pre-wrap">
-                <ReactMarkdown>{body}</ReactMarkdown>
+                <Markdown>{body}</Markdown>
               </div>
             </motion.div>
           );
@@ -1123,12 +1267,8 @@ function AnalystView({ initialSearchSymbol }: { initialSearchSymbol?: string }) 
     setIsSearchingStock(true);
     setStockSearchQuery(symbol.toUpperCase());
     try {
-      const modelName = 'gemini-1.5-flash';
-      const genAI = new GoogleGenAI(apiKey);
-      const model = genAI.getGenerativeModel({ 
-        model: modelName,
-        tools: [{ googleSearch: {} }] as any,
-      });
+      const modelName = 'gemini-3-flash-preview';
+      const ai = new GoogleGenAI({ apiKey });
 
       const promptTemplate = `Return ONLY a valid JSON object (no markdown code blocks, no extra text) with the following real-time and technical info for the EGX stock: ${symbol}.
       Fields: 
@@ -1153,8 +1293,14 @@ function AnalystView({ initialSearchSymbol }: { initialSearchSymbol?: string }) 
       
       Use Google Search to get the ABSOLUTE LATEST technicals, price, fundamentals, and most recent 3-4 news items from EGX/Mubasher/AlBorsa.`;
 
-      const result = await model.generateContent(promptTemplate);
-      const text = result.response.text();
+      const result = await ai.models.generateContent({
+        model: modelName,
+        contents: [{ role: 'user', parts: [{ text: promptTemplate }] }],
+        config: {
+          tools: [{ googleSearch: {} }],
+        }
+      });
+      const text = result.text;
       
       if (!text) {
         throw new Error('لم يتم استلام رد من الذكاء الاصطناعي.');
@@ -1254,17 +1400,19 @@ function AnalystView({ initialSearchSymbol }: { initialSearchSymbol?: string }) 
 \n\n User Question: ${userQuery}
 `;
 
-      const modelName = 'gemini-1.5-flash';
-      const genAI = new GoogleGenAI(apiKey);
-      const model = genAI.getGenerativeModel({ 
-        model: modelName,
-        tools: [{ googleSearch: {} }],
-      });
+      const modelName = 'gemini-3-flash-preview';
+      const ai = new GoogleGenAI({ apiKey });
       
       setLoadingPhase('جاري استدعاء محركات البحث للبورصة المصرية...');
-      const result = await model.generateContent(analystPrompt);
+      const result = await ai.models.generateContent({
+        model: modelName,
+        contents: [{ role: 'user', parts: [{ text: analystPrompt }] }],
+        config: {
+          tools: [{ googleSearch: {} }],
+        }
+      });
       
-      const text = result.response.text() || 'عذراً، لم أتمكن من الحصول على رد حالياً.';
+      const text = result.text || 'عذراً، لم أتمكن من الحصول على رد حالياً.';
       setMessages(prev => [...prev, { role: 'ai', content: text }]);
     } catch (err: unknown) {
       console.error('Gemini API Error:', err);
@@ -1636,12 +1784,8 @@ function RecommendationsView({ onStockClick }: { onStockClick: (symbol: string) 
     isFetchingRef.current = true;
     setIsLoading(true);
     try {
-      const modelName = 'gemini-1.5-flash';
-      const genAI = new GoogleGenAI(apiKey);
-      const model = genAI.getGenerativeModel({ 
-        model: modelName,
-        tools: [{ googleSearch: {} }],
-      });
+      const modelName = 'gemini-3-flash-preview';
+      const ai = new GoogleGenAI({ apiKey });
 
       const prompt = `Act as Brights Pro, a top EGX analyst. 
       Use Google Search to find the ACTUAL LATEST prices and technical analysis for these specific stocks in the Egyptian Exchange: COMI, TMGH, SWDY, EKHO, PHDC.
@@ -1658,9 +1802,15 @@ function RecommendationsView({ onStockClick }: { onStockClick: (symbol: string) 
       
       Return ONLY a valid JSON array of objects.`;
 
-      const result = await model.generateContent(prompt);
+      const result = await ai.models.generateContent({
+        model: modelName,
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
+        config: {
+          tools: [{ googleSearch: {} }],
+        }
+      });
 
-      const text = result.response.text();
+      const text = result.text;
       if (!text) {
         throw new Error('Recommendations Fetch Error: Empty response from AI');
       }
@@ -2036,8 +2186,8 @@ export default function Page() {
   useEffect(() => {
     if (isMobile) setIsCollapsed(true);
   }, [isMobile]);
-  type TabType = 'Dashboard' | 'Analyst' | 'Market' | 'Funds' | 'History' | 'Settings' | 'Calculator' | 'Trading';
-  const [activeTab, setActiveTab] = useState<TabType>('Analyst');
+  type TabType = 'Overview' | 'Dashboard' | 'Analyst' | 'Market' | 'Funds' | 'History' | 'Settings' | 'Calculator' | 'Trading';
+  const [activeTab, setActiveTab] = useState<TabType>('Overview');
   const [selectedSymbol, setSelectedSymbol] = useState<string | undefined>(undefined);
   const [mounted, setMounted] = useState(false);
 
@@ -2228,11 +2378,12 @@ export default function Page() {
         </div>
 
         <nav className="flex-1 mt-6 px-3 space-y-1">
+          <NavItem icon={<Globe size={20} />} label="نظرة عامة" active={activeTab === 'Overview'} onClick={() => setActiveTab('Overview')} isCollapsed={isCollapsed} />
           <NavItem icon={<LayoutDashboard size={20} />} label="المحفظة الذكية" active={activeTab === 'Dashboard'} onClick={() => setActiveTab('Dashboard')} isCollapsed={isCollapsed} />
           <NavItem icon={<LineChartIcon size={20} />} label="التحليل الذكي" active={activeTab === 'Analyst'} onClick={() => setActiveTab('Analyst')} isCollapsed={isCollapsed} />
           <NavItem icon={<Zap size={20} />} label="رادار الأسهم" active={activeTab === 'Market'} onClick={() => setActiveTab('Market')} isCollapsed={isCollapsed} />
           <NavItem icon={<Activity size={20} />} label="التداول الآلي" active={activeTab === 'Trading'} onClick={() => setActiveTab('Trading')} isCollapsed={isCollapsed} />
-          <NavItem icon={<Globe size={20} />} label="صناديق الاستثمار" active={activeTab === 'Funds'} onClick={() => setActiveTab('Funds')} isCollapsed={isCollapsed} />
+          <NavItem icon={<PieChart size={20} />} label="صناديق الاستثمار" active={activeTab === 'Funds'} onClick={() => setActiveTab('Funds')} isCollapsed={isCollapsed} />
           <NavItem icon={<History size={20} />} label="التوصيات الفنية" active={activeTab === 'History'} onClick={() => setActiveTab('History')} isCollapsed={isCollapsed} />
           <NavItem icon={<Activity size={20} />} label="حاسبة العائد" active={activeTab === 'Calculator'} onClick={() => setActiveTab('Calculator')} isCollapsed={isCollapsed} />
         </nav>
@@ -2249,7 +2400,6 @@ export default function Page() {
           {isCollapsed ? <ChevronRight size={20} /> : <X size={20} />}
         </button>
       </aside>
-
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0 bg-slate-100 relative">
         <div className="h-10 bg-slate-900 flex items-center overflow-hidden whitespace-nowrap shrink-0">
@@ -2300,6 +2450,16 @@ export default function Page() {
              <div className="max-w-6xl mx-auto h-full flex flex-col">
                 <div className="flex-1 w-full h-full relative">
                   <AnimatePresence mode="wait">
+                    {activeTab === 'Overview' && (
+                      <motion.div 
+                        key="overview"
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -10 }}
+                      >
+                        <MarketOverview />
+                      </motion.div>
+                    )}
                     {activeTab === 'Analyst' && (
                       <motion.div 
                         key="analyst" 
